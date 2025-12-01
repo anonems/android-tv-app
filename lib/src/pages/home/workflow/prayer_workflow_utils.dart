@@ -56,7 +56,8 @@ class PrayerWorkflowUtils {
   }
 
   /// Determine if the workflow should trigger on ADHAN (actualTimes) instead of IQAMA (actualIqamaTimes)
-  /// This happens when the duration for a daily prayer is set to 0
+  /// Per requirements: when duration for a daily prayer is set to 0, the workflow triggers on ADHAN time
+  /// This allows users to configure different trigger points for the live stream
   static Future<bool> shouldTriggerOnAdhan(int prayerIndex) async {
     final duration = await getLiveDurationForPrayer(prayerIndex);
     return duration == 0;

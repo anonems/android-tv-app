@@ -28,6 +28,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
   late StreamSubscription<bool> keyboardSubscription;
 
   Timer? _saveUrlTimer;
+  Timer? _saveDurationTimer;
 
   // Controllers for live video duration fields
   final TextEditingController _fajrDurationController = TextEditingController();
@@ -129,6 +130,13 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     }
   }
 
+  void _saveDebouncedLiveVideoSettings() {
+    _saveDurationTimer?.cancel();
+    _saveDurationTimer = Timer(const Duration(milliseconds: 500), () {
+      _saveLiveVideoSettings();
+    });
+  }
+
   void _saveDebouncedUrl(String url) {
     _saveUrlTimer?.cancel();
     _saveUrlTimer = Timer(const Duration(milliseconds: 500), () async {
@@ -149,6 +157,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _saveButtonFocusNode.dispose();
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
+    _saveDurationTimer?.cancel();
     keyboardSubscription.cancel();
     // Dispose live video duration controllers
     _fajrDurationController.dispose();
@@ -675,7 +684,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
       controller: controller,
       keyboardType: TextInputType.number,
       onEditingComplete: () {
-        _saveLiveVideoSettings();
+        _saveDebouncedLiveVideoSettings();
       },
       decoration: InputDecoration(
         labelText: label,

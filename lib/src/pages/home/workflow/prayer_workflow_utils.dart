@@ -50,7 +50,7 @@ class PrayerWorkflowUtils {
 
       items.add(
         RepeatingWorkflowItem(
-          debugName: '$label Live #$i',
+          debugName: '${prayerKey.toUpperCase()} Live Stream $i',
           builder: liveStreamBuilder,
           dateTime: occurrence,
           duration: durationMinutes > 0 ? Duration(minutes: durationMinutes) : null,

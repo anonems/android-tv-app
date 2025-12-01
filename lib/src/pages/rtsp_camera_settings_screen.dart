@@ -28,6 +28,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
   late StreamSubscription<bool> keyboardSubscription;
 
   Timer? _saveUrlTimer;
+  Timer? _saveLiveDurationTimer;
 
   // Duration controllers for prayers
   final TextEditingController _fajrDurationController = TextEditingController();
@@ -112,6 +113,13 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     }
   }
 
+  void _saveLiveDurationSettingsDebounced() {
+    _saveLiveDurationTimer?.cancel();
+    _saveLiveDurationTimer = Timer(const Duration(milliseconds: 500), () {
+      _saveLiveDurationSettings();
+    });
+  }
+
   Future<void> _saveLiveDurationSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -156,6 +164,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _saveButtonFocusNode.dispose();
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
+    _saveLiveDurationTimer?.cancel();
     keyboardSubscription.cancel();
     // Dispose duration controllers
     _fajrDurationController.dispose();
@@ -641,7 +650,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
             setState(() {
               _liveEnableDaily = value;
             });
-            _saveLiveDurationSettings();
+            _saveLiveDurationSettingsDebounced();
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -657,7 +666,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
             setState(() {
               _liveEnableJumua = value;
             });
-            _saveLiveDurationSettings();
+            _saveLiveDurationSettingsDebounced();
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -666,14 +675,14 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
         ),
         const SizedBox(height: 12),
         SwitchListTile(
-          title: const Text('Enable Live for Aid'),
+          title: const Text('Enable Live for Eid'),
           subtitle: const Text('Show live stream during Eid prayers'),
           value: _liveEnableAid,
           onChanged: (value) {
             setState(() {
               _liveEnableAid = value;
             });
-            _saveLiveDurationSettings();
+            _saveLiveDurationSettingsDebounced();
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -725,7 +734,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
             children: [
               if (_liveEnableJumua) Expanded(child: _buildDurationField('Jumua', _jumuaDurationController)),
               if (_liveEnableJumua && _liveEnableAid) const SizedBox(width: 12),
-              if (_liveEnableAid) Expanded(child: _buildDurationField('Aid', _aidDurationController)),
+              if (_liveEnableAid) Expanded(child: _buildDurationField('Eid', _aidDurationController)),
               if (!_liveEnableJumua || !_liveEnableAid) const Expanded(child: SizedBox()),
             ],
           ),

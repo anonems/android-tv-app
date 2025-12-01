@@ -29,6 +29,20 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
   Timer? _saveUrlTimer;
 
+  // Duration controllers for prayers
+  final TextEditingController _fajrDurationController = TextEditingController();
+  final TextEditingController _dhuhrDurationController = TextEditingController();
+  final TextEditingController _asrDurationController = TextEditingController();
+  final TextEditingController _maghribDurationController = TextEditingController();
+  final TextEditingController _ishaDurationController = TextEditingController();
+  final TextEditingController _jumuaDurationController = TextEditingController();
+  final TextEditingController _aidDurationController = TextEditingController();
+
+  // Enable switches
+  bool _liveEnableDaily = false;
+  bool _liveEnableJumua = false;
+  bool _liveEnableAid = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +57,8 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
     // Load the saved URL immediately when screen opens
     _loadSavedUrl();
+    // Load live duration settings
+    _loadLiveDurationSettings();
   }
 
   Future<void> _loadSavedUrl() async {
@@ -55,6 +71,68 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
       }
     } catch (e) {
       dev.log('⚠️ [RTSP_SCREEN] Error loading saved URL: $e');
+    }
+  }
+
+  Future<void> _loadLiveDurationSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Load duration values with defaults
+      final fajr = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationFajr) ?? LiveStreamConstants.defaultDurationFajr;
+      final dhuhr = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationDhuhr) ?? LiveStreamConstants.defaultDurationDhuhr;
+      final asr = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationAsr) ?? LiveStreamConstants.defaultDurationAsr;
+      final maghrib = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationMaghrib) ?? LiveStreamConstants.defaultDurationMaghrib;
+      final isha = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationIsha) ?? LiveStreamConstants.defaultDurationIsha;
+      final jumua = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationJumua) ?? LiveStreamConstants.defaultDurationJumua;
+      final aid = prefs.getInt(LiveStreamConstants.prefKeyLiveDurationAid) ?? LiveStreamConstants.defaultDurationAid;
+
+      // Load enable switches
+      final enableDaily = prefs.getBool(LiveStreamConstants.prefKeyLiveEnableDaily) ?? false;
+      final enableJumua = prefs.getBool(LiveStreamConstants.prefKeyLiveEnableJumua) ?? false;
+      final enableAid = prefs.getBool(LiveStreamConstants.prefKeyLiveEnableAid) ?? false;
+
+      setState(() {
+        _fajrDurationController.text = fajr.toString();
+        _dhuhrDurationController.text = dhuhr.toString();
+        _asrDurationController.text = asr.toString();
+        _maghribDurationController.text = maghrib.toString();
+        _ishaDurationController.text = isha.toString();
+        _jumuaDurationController.text = jumua.toString();
+        _aidDurationController.text = aid.toString();
+
+        _liveEnableDaily = enableDaily;
+        _liveEnableJumua = enableJumua;
+        _liveEnableAid = enableAid;
+      });
+
+      dev.log('📝 [RTSP_SCREEN] Loaded live duration settings');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error loading live duration settings: $e');
+    }
+  }
+
+  Future<void> _saveLiveDurationSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Save duration values
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationFajr, int.tryParse(_fajrDurationController.text) ?? LiveStreamConstants.defaultDurationFajr);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationDhuhr, int.tryParse(_dhuhrDurationController.text) ?? LiveStreamConstants.defaultDurationDhuhr);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationAsr, int.tryParse(_asrDurationController.text) ?? LiveStreamConstants.defaultDurationAsr);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationMaghrib, int.tryParse(_maghribDurationController.text) ?? LiveStreamConstants.defaultDurationMaghrib);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationIsha, int.tryParse(_ishaDurationController.text) ?? LiveStreamConstants.defaultDurationIsha);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationJumua, int.tryParse(_jumuaDurationController.text) ?? LiveStreamConstants.defaultDurationJumua);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationAid, int.tryParse(_aidDurationController.text) ?? LiveStreamConstants.defaultDurationAid);
+
+      // Save enable switches
+      await prefs.setBool(LiveStreamConstants.prefKeyLiveEnableDaily, _liveEnableDaily);
+      await prefs.setBool(LiveStreamConstants.prefKeyLiveEnableJumua, _liveEnableJumua);
+      await prefs.setBool(LiveStreamConstants.prefKeyLiveEnableAid, _liveEnableAid);
+
+      dev.log('💾 [RTSP_SCREEN] Saved live duration settings');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error saving live duration settings: $e');
     }
   }
 
@@ -79,6 +157,14 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
     keyboardSubscription.cancel();
+    // Dispose duration controllers
+    _fajrDurationController.dispose();
+    _dhuhrDurationController.dispose();
+    _asrDurationController.dispose();
+    _maghribDurationController.dispose();
+    _ishaDurationController.dispose();
+    _jumuaDurationController.dispose();
+    _aidDurationController.dispose();
     super.dispose();
   }
 
@@ -485,6 +571,9 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
                   ),
                 );
               }
+
+              // Always save live duration settings
+              await _saveLiveDurationSettings();
             },
             icon: const Icon(Icons.save),
             label: Text(S.of(context).save),
@@ -517,8 +606,147 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
               }),
             ),
           ),
+          const SizedBox(height: 30),
+          // Live Duration Settings Section
+          _buildLiveDurationSettings(),
         ],
       ],
+    );
+  }
+
+  Widget _buildLiveDurationSettings() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Live Stream Duration Settings',
+          style: Theme.of(context).textTheme.titleMedium?.apply(fontSizeFactor: 1.5),
+          textAlign: TextAlign.center,
+        ),
+        const Divider(indent: 50, endIndent: 50),
+        const SizedBox(height: 10),
+        Text(
+          'Configure the duration (in minutes) for live video streaming during prayers. Set to 0 to trigger on Adhan instead of Iqama.',
+          style: Theme.of(context).textTheme.bodySmall?.apply(fontSizeFactor: 1.2),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+
+        // Enable switches
+        SwitchListTile(
+          title: const Text('Enable Live for Daily Prayers'),
+          subtitle: const Text('Show live stream during Fajr, Dhuhr, Asr, Maghrib, Isha'),
+          value: _liveEnableDaily,
+          onChanged: (value) {
+            setState(() {
+              _liveEnableDaily = value;
+            });
+            _saveLiveDurationSettings();
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Theme.of(context).dividerColor),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          title: const Text('Enable Live for Jumua'),
+          subtitle: const Text('Show live stream during Friday prayer'),
+          value: _liveEnableJumua,
+          onChanged: (value) {
+            setState(() {
+              _liveEnableJumua = value;
+            });
+            _saveLiveDurationSettings();
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Theme.of(context).dividerColor),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          title: const Text('Enable Live for Aid'),
+          subtitle: const Text('Show live stream during Eid prayers'),
+          value: _liveEnableAid,
+          onChanged: (value) {
+            setState(() {
+              _liveEnableAid = value;
+            });
+            _saveLiveDurationSettings();
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Theme.of(context).dividerColor),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Daily prayer durations
+        if (_liveEnableDaily) ...[
+          Text(
+            'Daily Prayer Durations (minutes)',
+            style: Theme.of(context).textTheme.titleSmall?.apply(fontSizeFactor: 1.2),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildDurationField('Fajr', _fajrDurationController)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildDurationField('Dhuhr', _dhuhrDurationController)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildDurationField('Asr', _asrDurationController)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildDurationField('Maghrib', _maghribDurationController)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildDurationField('Isha', _ishaDurationController)),
+              const Expanded(child: SizedBox()),
+            ],
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // Jumua and Aid durations
+        if (_liveEnableJumua || _liveEnableAid) ...[
+          Text(
+            'Special Prayer Durations (minutes)',
+            style: Theme.of(context).textTheme.titleSmall?.apply(fontSizeFactor: 1.2),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (_liveEnableJumua) Expanded(child: _buildDurationField('Jumua', _jumuaDurationController)),
+              if (_liveEnableJumua && _liveEnableAid) const SizedBox(width: 12),
+              if (_liveEnableAid) Expanded(child: _buildDurationField('Aid', _aidDurationController)),
+              if (!_liveEnableJumua || !_liveEnableAid) const Expanded(child: SizedBox()),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDurationField(String label, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      onEditingComplete: () => _saveLiveDurationSettings(),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: 'min',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
     );
   }
 }

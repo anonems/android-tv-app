@@ -194,4 +194,27 @@ abstract class LiveStreamConstants {
 
   /// Timeout for auto-detection of live camera in minutes
   static const int autoDetectionTimeoutMinutes = 3;
+
+  /// Keys for live duration preferences (in minutes)
+  static const String prefKeyLiveDurationFajr = 'live_duration_fajr';
+  static const String prefKeyLiveDurationDhuhr = 'live_duration_dhuhr';
+  static const String prefKeyLiveDurationAsr = 'live_duration_asr';
+  static const String prefKeyLiveDurationMaghrib = 'live_duration_maghrib';
+  static const String prefKeyLiveDurationIsha = 'live_duration_isha';
+  static const String prefKeyLiveDurationJumua = 'live_duration_jumua';
+  static const String prefKeyLiveDurationAid = 'live_duration_aid';
+
+  /// Keys for live enable switches
+  static const String prefKeyLiveEnableDaily = 'live_enable_daily';
+  static const String prefKeyLiveEnableJumua = 'live_enable_jumua';
+  static const String prefKeyLiveEnableAid = 'live_enable_aid';
+
+  /// Default duration values (in minutes)
+  static const int defaultDurationFajr = 10;
+  static const int defaultDurationDhuhr = 15;
+  static const int defaultDurationAsr = 10;
+  static const int defaultDurationMaghrib = 8;
+  static const int defaultDurationIsha = 12;
+  static const int defaultDurationJumua = 30;
+  static const int defaultDurationAid = 30;
 }

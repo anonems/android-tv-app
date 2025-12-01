@@ -113,7 +113,8 @@ class PrayerWorkflowUtils {
   }) {
     final now = mosqueManager.mosqueDate();
     final startTime = getLiveStartTime(mosqueManager, prayerIndex, duration);
-    final effectiveDuration = duration > 0 ? duration : 15; // Default to 15 min if duration is 0
+    // Use fallback duration when duration is 0 (Adhan trigger mode)
+    final effectiveDuration = duration > 0 ? duration : LiveStreamConstants.fallbackDurationForAdhanTrigger;
     final endTime = startTime.add(Duration(minutes: effectiveDuration));
 
     dev.log('📺 [PRAYER_WORKFLOW] Generating WorkFlowItem for prayer $prayerIndex');
@@ -123,7 +124,6 @@ class PrayerWorkflowUtils {
       builder: liveStreamBuilder,
       duration: Duration(minutes: effectiveDuration),
       skip: now.isAfter(endTime),
-      disabled: duration < 0,
     );
   }
 

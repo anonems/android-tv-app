@@ -219,4 +219,7 @@ abstract class LiveStreamConstants {
   static const int defaultDurationIsha = 25;
   static const int defaultDurationJumua = 45;
   static const int defaultDurationAid = 60;
+
+  /// Fallback duration when duration is set to 0 (trigger at Adhan)
+  static const int fallbackDurationForAdhanTrigger = 15;
 }

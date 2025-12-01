@@ -659,7 +659,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
         ),
         const SizedBox(height: 8),
         _buildEnableSwitch(
-          title: 'Aïd Prayers',
+          title: 'Eid Prayers',
           subtitle: 'Enable live broadcast for Eid prayers',
           value: _enableAid,
           onChanged: (value) {
@@ -690,9 +690,9 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
           _buildDurationRow('Jumua', _durationJumuaController),
         ],
         
-        // Aid duration
+        // Eid duration
         if (_enableAid) ...[
-          _buildDurationRow('Aïd', _durationAidController),
+          _buildDurationRow('Eid', _durationAidController),
         ],
       ],
     );

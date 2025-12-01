@@ -429,5 +429,10 @@
   "prayerTimeNotificationTitle":"Notifications des heures de prière",
   "prayerTimeNotificationDesc":"Recevez l'adhan aux heures de prière, même lorsque l'application est fermée",
   "enablePrayerReminders":"Activer les rappels de prière",
-  "enablePrayerRemindersDesc":"Fonctionne automatiquement en arrière-plan"
+  "enablePrayerRemindersDesc":"Fonctionne automatiquement en arrière-plan",
+  "prayerVideoDurations": "Durées des vidéos de prière",
+  "prayerVideoDurationsDesc": "Définissez la durée (en minutes) d'affichage du flux vidéo à l'heure de l'iqama pour chaque prière. Mettez 0 pour désactiver.",
+  "specialPrayers": "Prières spéciales",
+  "aid": "Aïd",
+  "minutes": "min"
 }

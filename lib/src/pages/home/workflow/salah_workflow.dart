@@ -10,6 +10,7 @@ import 'package:mawaqit/src/pages/home/sub_screens/IqamaSubScreen.dart';
 import 'package:mawaqit/src/pages/home/sub_screens/IqamaaCountDownSubScreen.dart';
 import 'package:mawaqit/src/pages/home/sub_screens/normal_home.dart';
 import 'package:mawaqit/src/pages/home/widgets/workflows/repeating_workflow_widget.dart';
+import 'package:mawaqit/src/pages/home/workflow/prayer_workflow_utils.dart';
 import 'package:mawaqit/src/services/mosque_manager.dart';
 import 'package:mawaqit/src/services/user_preferences_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,64 +89,78 @@ class _SalahWorkflowScreenState extends ConsumerState<SalahWorkflowScreen> {
       Duration(minutes: int.tryParse(salahTime) ?? 0),
     );
 
-    return ContinuesWorkFlowWidget(
-      onDone: widget.onDone,
-      workFlowItems: [
-        /// before the adhan time
-        WorkFlowItem(
-          duration: mosqueManger.nextSalahAfter(),
-          skip: mosqueManger.nextSalahAfter() > Duration(minutes: 6),
-          builder: (context, next) => beforeSalahTime(mosqueManger, currentSalah, hijri),
-        ),
-        WorkFlowItem(
-          builder: (context, next) => AdhanSubScreen(onDone: next),
-        ),
-        WorkFlowItem(
-          builder: (context, next) => AfterAdhanSubScreen(onDone: next),
-          disabled: mosqueConfig.duaAfterAzanEnabled == false,
-        ),
-        WorkFlowItem(
-          builder: (context, next) => DuaaBetweenAdhanAndIqamaaScreen(
-            onDone: next,
-          ),
-          disabled: mosqueConfig.duaAfterAzanEnabled == false,
-          skip: true,
-        ),
-        WorkFlowItem(
-          builder: (context, next) => IqamaaCountDownSubScreen(
-            onDone: next,
-            currentSalahIndex: currentSalah,
-          ),
-          skip: now.isAfter(currentIqamaTime),
-          disabled: mosqueManger.mosqueConfig?.iqamaEnabled == false,
-        ),
-        WorkFlowItem(
-          builder: (context, next) => IqamaSubScreen(),
-          duration: Duration(seconds: mosqueConfig.iqamaDisplayTime ?? 30),
-          skip: now.isAfter(iqamaEndTime),
-          disabled: mosqueManger.mosqueConfig?.iqamaEnabled == false,
-        ),
-        WorkFlowItem(
-          builder: (context, next) =>
-              mosqueConfig.blackScreenWhenPraying == true ? Container(color: Colors.black) : NormalHomeSubScreen(),
-          skip: now.isAfter(salahEndTime),
-          duration: mosqueManger.currentSalahDuration,
-          disabled: mosqueConfig.iqamaEnabled == false,
-        ),
-        WorkFlowItem(
-          builder: (context, next) => AfterSalahAzkar(onDone: next),
-          disabled: mosqueConfig.iqamaEnabled == false,
-        ),
-        WorkFlowItem(
-            duration: kAzkarDuration,
-            builder: (context, next) => AfterSalahAzkar(
+    // Use FutureBuilder to load video workflow items without blocking UI
+    return FutureBuilder<WorkFlowItem?>(
+      future: PrayerWorkflowUtils.generateSingleVideoWorkflowItem(
+        salahIndex: currentSalah,
+        iqamaTime: currentIqamaTime,
+        currentTime: now,
+      ),
+      builder: (context, snapshot) {
+        final videoWorkflowItem = snapshot.data;
 
-                /// this is a redundant parameter as it is always should be (isFajrPray | isAsrPray)
-                isAfterAsrOrFajr: true,
-                isAfterAsr: isAsrPray,
-                azkarTitle: isFajrPray ? AzkarConstant.kAzkarSabahAfterPrayer : AzkarConstant.kAzkarAsrAfterPrayer),
-            disabled: mosqueConfig.iqamaEnabled == false || (!isFajrPray && !isAsrPray)),
-      ],
+        return ContinuesWorkFlowWidget(
+          onDone: widget.onDone,
+          workFlowItems: [
+            /// before the adhan time
+            WorkFlowItem(
+              duration: mosqueManger.nextSalahAfter(),
+              skip: mosqueManger.nextSalahAfter() > Duration(minutes: 6),
+              builder: (context, next) => beforeSalahTime(mosqueManger, currentSalah, hijri),
+            ),
+            WorkFlowItem(
+              builder: (context, next) => AdhanSubScreen(onDone: next),
+            ),
+            WorkFlowItem(
+              builder: (context, next) => AfterAdhanSubScreen(onDone: next),
+              disabled: mosqueConfig.duaAfterAzanEnabled == false,
+            ),
+            WorkFlowItem(
+              builder: (context, next) => DuaaBetweenAdhanAndIqamaaScreen(
+                onDone: next,
+              ),
+              disabled: mosqueConfig.duaAfterAzanEnabled == false,
+              skip: true,
+            ),
+            WorkFlowItem(
+              builder: (context, next) => IqamaaCountDownSubScreen(
+                onDone: next,
+                currentSalahIndex: currentSalah,
+              ),
+              skip: now.isAfter(currentIqamaTime),
+              disabled: mosqueManger.mosqueConfig?.iqamaEnabled == false,
+            ),
+            WorkFlowItem(
+              builder: (context, next) => IqamaSubScreen(),
+              duration: Duration(seconds: mosqueConfig.iqamaDisplayTime ?? 30),
+              skip: now.isAfter(iqamaEndTime),
+              disabled: mosqueManger.mosqueConfig?.iqamaEnabled == false,
+            ),
+            // Video stream workflow item - inserted after iqama display
+            if (videoWorkflowItem != null) videoWorkflowItem,
+            WorkFlowItem(
+              builder: (context, next) =>
+                  mosqueConfig.blackScreenWhenPraying == true ? Container(color: Colors.black) : NormalHomeSubScreen(),
+              skip: now.isAfter(salahEndTime),
+              duration: mosqueManger.currentSalahDuration,
+              disabled: mosqueConfig.iqamaEnabled == false,
+            ),
+            WorkFlowItem(
+              builder: (context, next) => AfterSalahAzkar(onDone: next),
+              disabled: mosqueConfig.iqamaEnabled == false,
+            ),
+            WorkFlowItem(
+                duration: kAzkarDuration,
+                builder: (context, next) => AfterSalahAzkar(
+
+                    /// this is a redundant parameter as it is always should be (isFajrPray | isAsrPray)
+                    isAfterAsrOrFajr: true,
+                    isAfterAsr: isAsrPray,
+                    azkarTitle: isFajrPray ? AzkarConstant.kAzkarSabahAfterPrayer : AzkarConstant.kAzkarAsrAfterPrayer),
+                disabled: mosqueConfig.iqamaEnabled == false || (!isFajrPray && !isAsrPray)),
+          ],
+        );
+      },
     );
   }
 }

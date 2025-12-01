@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mawaqit/i18n/l10n.dart';
 import 'package:mawaqit/src/const/constants.dart';
 import 'package:mawaqit/src/domain/error/rtsp_expceptions.dart';
+import 'package:mawaqit/src/pages/home/workflow/prayer_workflow_utils.dart';
 import 'package:mawaqit/src/state_management/livestream_viewer/live_stream_notifier.dart';
 import 'package:mawaqit/src/state_management/livestream_viewer/live_stream_state.dart';
 import 'package:mawaqit/src/widgets/ScreenWithAnimation.dart';
@@ -29,6 +31,15 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
   Timer? _saveUrlTimer;
 
+  // Controllers for prayer duration fields
+  final TextEditingController _fajrDurationController = TextEditingController();
+  final TextEditingController _dhuhrDurationController = TextEditingController();
+  final TextEditingController _asrDurationController = TextEditingController();
+  final TextEditingController _maghribDurationController = TextEditingController();
+  final TextEditingController _ishaDurationController = TextEditingController();
+  final TextEditingController _jumuaDurationController = TextEditingController();
+  final TextEditingController _aidDurationController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +54,8 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
     // Load the saved URL immediately when screen opens
     _loadSavedUrl();
+    // Load prayer durations
+    _loadPrayerDurations();
   }
 
   Future<void> _loadSavedUrl() async {
@@ -56,6 +69,31 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     } catch (e) {
       dev.log('⚠️ [RTSP_SCREEN] Error loading saved URL: $e');
     }
+  }
+
+  Future<void> _loadPrayerDurations() async {
+    try {
+      final durations = await PrayerWorkflowUtils.getAllPrayerDurations();
+      dev.log('📝 [RTSP_SCREEN] Loading prayer durations: $durations');
+
+      setState(() {
+        _fajrDurationController.text = durations[PrayerType.fajr]?.toString() ?? '0';
+        _dhuhrDurationController.text = durations[PrayerType.dhuhr]?.toString() ?? '0';
+        _asrDurationController.text = durations[PrayerType.asr]?.toString() ?? '0';
+        _maghribDurationController.text = durations[PrayerType.maghrib]?.toString() ?? '0';
+        _ishaDurationController.text = durations[PrayerType.isha]?.toString() ?? '0';
+        _jumuaDurationController.text = durations[PrayerType.jumua]?.toString() ?? '0';
+        _aidDurationController.text = durations[PrayerType.aid]?.toString() ?? '0';
+      });
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error loading prayer durations: $e');
+    }
+  }
+
+  Future<void> _savePrayerDuration(PrayerType prayerType, String value) async {
+    final duration = int.tryParse(value) ?? 0;
+    await PrayerWorkflowUtils.saveLiveDurationForPrayer(prayerType, duration);
+    dev.log('💾 [RTSP_SCREEN] Saved duration for $prayerType: $duration minutes');
   }
 
   void _saveDebouncedUrl(String url) {
@@ -79,6 +117,14 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
     keyboardSubscription.cancel();
+    // Dispose prayer duration controllers
+    _fajrDurationController.dispose();
+    _dhuhrDurationController.dispose();
+    _asrDurationController.dispose();
+    _maghribDurationController.dispose();
+    _ishaDurationController.dispose();
+    _jumuaDurationController.dispose();
+    _aidDurationController.dispose();
     super.dispose();
   }
 
@@ -517,8 +563,131 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
               }),
             ),
           ),
+          const SizedBox(height: 30),
+          // Prayer Duration Settings Section
+          _buildPrayerDurationsSection(),
         ],
       ],
+    );
+  }
+
+  /// Build the prayer durations configuration section
+  Widget _buildPrayerDurationsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          S.of(context).prayerVideoDurations,
+          style: Theme.of(context).textTheme.titleMedium?.apply(fontSizeFactor: 1.5),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          S.of(context).prayerVideoDurationsDesc,
+          style: Theme.of(context).textTheme.bodySmall?.apply(fontSizeFactor: 1.2),
+          textAlign: TextAlign.center,
+        ),
+        const Divider(indent: 50, endIndent: 50),
+        const SizedBox(height: 16),
+        // Regular prayers row
+        Row(
+          children: [
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).fajr,
+                controller: _fajrDurationController,
+                prayerType: PrayerType.fajr,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).duhr,
+                controller: _dhuhrDurationController,
+                prayerType: PrayerType.dhuhr,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).asr,
+                controller: _asrDurationController,
+                prayerType: PrayerType.asr,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).maghrib,
+                controller: _maghribDurationController,
+                prayerType: PrayerType.maghrib,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).isha,
+                controller: _ishaDurationController,
+                prayerType: PrayerType.isha,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        // Special prayers row
+        Text(
+          S.of(context).specialPrayers,
+          style: Theme.of(context).textTheme.titleSmall?.apply(fontSizeFactor: 1.2),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).jumua,
+                controller: _jumuaDurationController,
+                prayerType: PrayerType.jumua,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildDurationField(
+                label: S.of(context).aid,
+                controller: _aidDurationController,
+                prayerType: PrayerType.aid,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Build a single duration input field
+  Widget _buildDurationField({
+    required String label,
+    required TextEditingController controller,
+    required PrayerType prayerType,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: S.of(context).minutes,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      onChanged: (value) {
+        _savePrayerDuration(prayerType, value);
+      },
     );
   }
 }

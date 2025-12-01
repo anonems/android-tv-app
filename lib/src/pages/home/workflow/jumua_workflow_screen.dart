@@ -5,6 +5,7 @@ import 'package:mawaqit/src/pages/home/sub_screens/AfterSalahAzkarScreen.dart';
 import 'package:mawaqit/src/pages/home/sub_screens/JummuaLive.dart';
 import 'package:mawaqit/src/pages/home/sub_screens/normal_home.dart';
 import 'package:mawaqit/src/pages/home/widgets/workflows/WorkFlowWidget.dart';
+import 'package:mawaqit/src/pages/home/workflow/prayer_workflow_utils.dart';
 import 'package:mawaqit/src/services/mosque_manager.dart';
 import 'package:provider/provider.dart';
 
@@ -12,6 +13,18 @@ import 'package:provider/provider.dart';
 class JumuaaWorkflowScreen extends StatelessWidget {
   const JumuaaWorkflowScreen({Key? key, this.onDone}) : super(key: key);
   final VoidCallback? onDone;
+
+  /// Get all Jumua occurrence times as DateTime objects
+  List<DateTime> _getJumuaOccurrences(MosqueManager mosqueManager) {
+    final jumuaTimes = mosqueManager.getOrderedJumuaTimes();
+    final nextFriday = mosqueManager.nextFridayDate();
+    
+    return jumuaTimes
+        .map((timeStr) => timeStr.toTimeOfDay()?.toDate(nextFriday))
+        .where((dt) => dt != null)
+        .cast<DateTime>()
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,39 +36,58 @@ class JumuaaWorkflowScreen extends StatelessWidget {
 
     final jumuaaTime = mosqueManager.activeJumuaaDate();
     final jumuaaEndTime = jumuaaTime.add(Duration(minutes: jumuaaTimeout));
+    
+    // Get all Jumua occurrences for video display
+    final jumuaOccurrences = _getJumuaOccurrences(mosqueManager);
 
-    return ContinuesWorkFlowWidget(
-      debug: true,
-      workFlowItems: [
-        /// 5m before the jumuaa start time
-        WorkFlowItem(
-          builder: (context, next) => NormalHomeSubScreen(),
-          duration: jumuaaTime.difference(now),
-          skip: now.isAfter(jumuaaTime),
-        ),
+    // Use FutureBuilder to load video workflow items without blocking UI
+    return FutureBuilder<List<WorkFlowItem>>(
+      future: PrayerWorkflowUtils.generateVideoWorkflowItems(
+        prayerType: PrayerType.jumua,
+        iqamaTime: jumuaaTime,
+        currentTime: now,
+        occurrences: jumuaOccurrences,
+      ),
+      builder: (context, snapshot) {
+        final videoWorkflowItems = snapshot.data ?? [];
 
-        WorkFlowItem(
-          builder: (context, next) => JummuaLive(onDone: next),
-          skip: now.isAfter(jumuaaEndTime),
+        return ContinuesWorkFlowWidget(
+          debug: true,
+          workFlowItems: [
+            /// 5m before the jumuaa start time
+            WorkFlowItem(
+              builder: (context, next) => NormalHomeSubScreen(),
+              duration: jumuaaTime.difference(now),
+              skip: now.isAfter(jumuaaTime),
+            ),
 
-          /// handle if user open screen during the jumuaa
-          duration: now.isBefore(jumuaaTime) ? Duration(minutes: jumuaaTimeout) : jumuaaEndTime.difference(now),
-        ),
+            WorkFlowItem(
+              builder: (context, next) => JummuaLive(onDone: next),
+              skip: now.isAfter(jumuaaEndTime),
 
-        // salah time after jumuaa
-        WorkFlowItem(
-          builder: (context, next) => NormalHomeSubScreen(),
-          duration: salahTime.minutes,
-          skip: now.isAfter(jumuaaEndTime.add(salahTime.minutes)),
-        ),
+              /// handle if user open screen during the jumuaa
+              duration: now.isBefore(jumuaaTime) ? Duration(minutes: jumuaaTimeout) : jumuaaEndTime.difference(now),
+            ),
+            
+            // Add video workflow items for all Jumua occurrences
+            ...videoWorkflowItems,
 
-        // azkar after salah
-        WorkFlowItem(
-          builder: (context, next) => AfterSalahAzkar(onDone: onDone),
-          debugDuration: 2.minutes,
-          skip: now.isAfter(jumuaaEndTime.add((salahTime + 2).minutes)),
-        ),
-      ],
+            // salah time after jumuaa
+            WorkFlowItem(
+              builder: (context, next) => NormalHomeSubScreen(),
+              duration: salahTime.minutes,
+              skip: now.isAfter(jumuaaEndTime.add(salahTime.minutes)),
+            ),
+
+            // azkar after salah
+            WorkFlowItem(
+              builder: (context, next) => AfterSalahAzkar(onDone: onDone),
+              debugDuration: 2.minutes,
+              skip: now.isAfter(jumuaaEndTime.add((salahTime + 2).minutes)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

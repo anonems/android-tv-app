@@ -1,3 +1,4 @@
+// RTSPCameraSettingsScreen - version étendue : ajoute gestion des durées live et switches
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
@@ -29,6 +30,22 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
   Timer? _saveUrlTimer;
 
+  // --- NEW : controllers for durations ---
+  final Map<String, TextEditingController> _durationControllers = {
+    'fajr': TextEditingController(),
+    'dhuhr': TextEditingController(),
+    'asr': TextEditingController(),
+    'maghrib': TextEditingController(),
+    'isha': TextEditingController(),
+    'jumua': TextEditingController(),
+    'aid': TextEditingController(),
+  };
+
+  // switches
+  bool _enableDaily = false;
+  bool _enableJumua = false;
+  bool _enableAid = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +60,7 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
     // Load the saved URL immediately when screen opens
     _loadSavedUrl();
+    _loadDurationsAndSwitches();
   }
 
   Future<void> _loadSavedUrl() async {
@@ -55,6 +73,62 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
       }
     } catch (e) {
       dev.log('⚠️ [RTSP_SCREEN] Error loading saved URL: $e');
+    }
+  }
+
+  Future<void> _loadDurationsAndSwitches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _durationControllers.forEach((k, c) {
+          final v = prefs.getInt('live_duration_$k') ?? _defaultFor(k);
+          c.text = v.toString();
+        });
+        _enableDaily = prefs.getBool('live_enable_daily') ?? false;
+        _enableJumua = prefs.getBool('live_enable_jumua') ?? false;
+        _enableAid = prefs.getBool('live_enable_aid') ?? false;
+      });
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error loading durations/switches: $e');
+    }
+  }
+
+  int _defaultFor(String key) {
+    switch (key) {
+      case 'fajr':
+        return 10;
+      case 'dhuhr':
+        return 15;
+      case 'asr':
+        return 10;
+      case 'maghrib':
+        return 8;
+      case 'isha':
+        return 12;
+      case 'jumua':
+        return 30;
+      case 'aid':
+        return 30;
+      default:
+        return 10;
+    }
+  }
+
+  Future<void> _saveDurations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final k in _durationControllers.keys) {
+        final txt = _durationControllers[k]!.text;
+        final parsed = int.tryParse(txt) ?? _defaultFor(k);
+        await prefs.setInt('live_duration_$k', parsed);
+      }
+      // save switches
+      await prefs.setBool('live_enable_daily', _enableDaily);
+      await prefs.setBool('live_enable_jumua', _enableJumua);
+      await prefs.setBool('live_enable_aid', _enableAid);
+      dev.log('💾 [RTSP_SCREEN] Durations and switches saved');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error saving durations: $e');
     }
   }
 
@@ -79,6 +153,8 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
     keyboardSubscription.cancel();
+    // dispose duration controllers
+    _durationControllers.forEach((_, c) => c.dispose());
     super.dispose();
   }
 
@@ -90,6 +166,77 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
       dev.log('📝 [RTSP_SCREEN] Updating URL controller with: ${state.streamUrl}');
       _urlController.text = state.streamUrl!;
     }
+  }
+
+  Widget _buildDurationSection() {
+    Widget row(String key, String label) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Row(
+          children: [
+            Expanded(child: Text(label)),
+            SizedBox(
+              width: 90,
+              child: TextField(
+                controller: _durationControllers[key],
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(suffixText: 'min'),
+                onSubmitted: (_) => _saveDurations(),
+                onEditingComplete: () => _saveDurations(),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(S.of(context).rtspCameraSettingTitle, style: Theme.of(context).textTheme.titleMedium?.apply(fontSizeFactor: 1.2)),
+        const SizedBox(height: 8),
+        row('fajr', S.of(context).fajr),
+        row('dhuhr', S.of(context).dhuhr),
+        row('asr', S.of(context).asr),
+        row('maghrib', S.of(context).maghrib),
+        row('isha', S.of(context).isha),
+        const Divider(),
+        Text('Jumua / Aïd', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        row('jumua', 'Jumua (durée par occurrence)'),
+        row('aid', 'Aïd (durée par occurrence)'),
+        const SizedBox(height: 12),
+        // switches
+        SwitchListTile(
+          title: Text('Activer live pour les 5 prières quotidiennes'),
+          value: _enableDaily,
+          onChanged: (v) async {
+            setState(() => _enableDaily = v);
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('live_enable_daily', v);
+          },
+        ),
+        SwitchListTile(
+          title: Text('Activer live pour Jumua'),
+          value: _enableJumua,
+          onChanged: (v) async {
+            setState(() => _enableJumua = v);
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('live_enable_jumua', v);
+          },
+        ),
+        SwitchListTile(
+          title: Text('Activer live pour Aïd'),
+          value: _enableAid,
+          onChanged: (v) async {
+            setState(() => _enableAid = v);
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('live_enable_aid', v);
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -381,7 +528,6 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
             },
             onSubmitted: (_) {
               dev.log('📤 [RTSP_SCREEN] URL submitted: ${_urlController.text}');
-              // ref.read(rtspCameraSettingsProvider.notifier).toggleReplaceWorkflow(state.replaceWorkflow);
               ref.read(liveStreamProvider.notifier).updateStream(
                     url: _urlController.text,
                   );
@@ -395,6 +541,9 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
             ),
           ),
           const SizedBox(height: 20),
+          // --- Insert duration section here ---
+          _buildDurationSection(),
+          const SizedBox(height: 12),
           ElevatedButton.icon(
             focusNode: _saveButtonFocusNode,
             onPressed: () async {
@@ -421,6 +570,9 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
               // Wait a moment to ensure UI updates
               await Future.delayed(const Duration(milliseconds: 100));
+
+              // Persist durations & switches
+              await _saveDurations();
 
               // Always test RTSP connection first when it's an RTSP URL
               if (_urlController.text.isNotEmpty && _urlController.text.startsWith('rtsp://')) {
@@ -456,14 +608,15 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
               }
 
               // Only update the stream if the URL has actually changed OR if we need to reconnect
-              if (_urlController.text != state.streamUrl || state.streamStatus != LiveStreamStatus.active) {
+              final stateNow = ref.read(liveStreamProvider).value;
+              if (_urlController.text != stateNow?.streamUrl || stateNow?.streamStatus != LiveStreamStatus.active) {
                 dev.log('🔄 [RTSP_SCREEN] Updating stream (URL changed or reconnecting)');
                 await Future.delayed(const Duration(milliseconds: 500));
 
                 ref.read(liveStreamProvider.notifier).updateStream(
                       url: _urlController.text,
                     );
-              } else if (state.streamUrl != null && state.streamUrl!.isNotEmpty) {
+              } else if (stateNow?.streamUrl != null && stateNow!.streamUrl!.isNotEmpty) {
                 dev.log('📝 [RTSP_SCREEN] URL unchanged and stream active, only updating workflow flag');
                 // URL hasn't changed and stream is active, just update the workflow flag if needed
                 ref.read(liveStreamProvider.notifier).toggleReplaceWorkflow(state.replaceWorkflow);

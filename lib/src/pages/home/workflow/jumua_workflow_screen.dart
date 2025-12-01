@@ -1,3 +1,4 @@
+// GENERATED - gestion des occurrences multiples de Jumua via prayer_workflow_utils
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mawaqit/src/helpers/time_utils.dart';
@@ -7,6 +8,7 @@ import 'package:mawaqit/src/pages/home/sub_screens/normal_home.dart';
 import 'package:mawaqit/src/pages/home/widgets/workflows/WorkFlowWidget.dart';
 import 'package:mawaqit/src/services/mosque_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:mawaqit/src/pages/home/workflow/prayer_workflow_utils.dart' as prayer_utils;
 
 /// show the back screen during the jumuaa
 class JumuaaWorkflowScreen extends StatelessWidget {
@@ -24,38 +26,73 @@ class JumuaaWorkflowScreen extends StatelessWidget {
     final jumuaaTime = mosqueManager.activeJumuaaDate();
     final jumuaaEndTime = jumuaaTime.add(Duration(minutes: jumuaaTimeout));
 
-    return ContinuesWorkFlowWidget(
-      debug: true,
-      workFlowItems: [
-        /// 5m before the jumuaa start time
-        WorkFlowItem(
-          builder: (context, next) => NormalHomeSubScreen(),
-          duration: jumuaaTime.difference(now),
-          skip: now.isAfter(jumuaaTime),
-        ),
+    // FutureBuilder pour générer dynamiquement la liste (préfixe -> 0..n vidéo items -> suffixe)
+    return FutureBuilder<List<WorkFlowItem>>(
+      future: () async {
+        final items = <WorkFlowItem>[];
 
-        WorkFlowItem(
-          builder: (context, next) => JummuaLive(onDone: next),
-          skip: now.isAfter(jumuaaEndTime),
+        // Prefix: écran normal jusqu'à la première jumuaaTime
+        items.add(
+          WorkFlowItem(
+            builder: (context, next) => NormalHomeSubScreen(),
+            duration: jumuaaTime.difference(now),
+            skip: now.isAfter(jumuaaTime),
+          ),
+        );
 
-          /// handle if user open screen during the jumuaa
-          duration: now.isBefore(jumuaaTime) ? Duration(minutes: jumuaaTimeout) : jumuaaEndTime.difference(now),
-        ),
+        // Générer les WorkFlowItem vidéo pour toutes les occurrences de Jumua aujourd'hui
+        List<DateTime> getIqamaDatesForJumua() {
+          // Si MosqueManager expose plusieurs dates de Jumua, utilisez-les ici.
+          // Par défaut on renvoie la date active (singleton)
+          final dt = mosqueManager.activeJumuaaDate();
+          return dt != null ? [dt] : [];
+        }
 
-        // salah time after jumuaa
-        WorkFlowItem(
-          builder: (context, next) => NormalHomeSubScreen(),
-          duration: salahTime.minutes,
-          skip: now.isAfter(jumuaaEndTime.add(salahTime.minutes)),
-        ),
+        final videoItems = await prayer_utils.makePrayerLiveWorkFlowItems(
+          prayerKey: 'jumua',
+          label: 'Jumua',
+          getOccurrences: getIqamaDatesForJumua,
+          mosqueManager: mosqueManager,
+          defaultMinutes: jumuaaTimeout,
+        );
 
-        // azkar after salah
-        WorkFlowItem(
-          builder: (context, next) => AfterSalahAzkar(onDone: onDone),
-          debugDuration: 2.minutes,
-          skip: now.isAfter(jumuaaEndTime.add((salahTime + 2).minutes)),
-        ),
-      ],
+        items.addAll(videoItems);
+
+        // Suffix: after jumua, afficher l'écran normal pendant la durée du salahTime (comme avant)
+        items.add(
+          WorkFlowItem(
+            builder: (context, next) => NormalHomeSubScreen(),
+            duration: salahTime.minutes,
+            skip: now.isAfter(jumuaaEndTime.add(salahTime.minutes)),
+          ),
+        );
+
+        // Azkar after salah
+        items.add(
+          WorkFlowItem(
+            builder: (context, next) => AfterSalahAzkar(onDone: onDone),
+            debugDuration: 2.minutes,
+            skip: now.isAfter(jumuaaEndTime.add((salahTime + 2).minutes)),
+          ),
+        );
+
+        return items;
+      }(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return ContinuesWorkFlowWidget(
+            debug: true,
+            workFlowItems: [
+              WorkFlowItem(builder: (context, next) => Center(child: CircularProgressIndicator())),
+            ],
+          );
+        }
+        final items = snapshot.data ?? [];
+        return ContinuesWorkFlowWidget(
+          debug: true,
+          workFlowItems: items,
+        );
+      },
     );
   }
 }

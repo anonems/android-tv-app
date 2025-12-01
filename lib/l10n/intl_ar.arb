@@ -445,5 +445,10 @@
   "prayerTimeNotificationTitle":"أذان أوقات الصلاة",
   "prayerTimeNotificationDesc":"استقبل الأذان في أوقات الصلاة، حتى عند إغلاق التطبيق",
   "enablePrayerReminders":"تفعيل أذان الصلاة",
-  "enablePrayerRemindersDesc":"يعمل تلقائيًا في الخلفية"
+  "enablePrayerRemindersDesc":"يعمل تلقائيًا في الخلفية",
+  "prayerVideoDurations": "مدة بث الفيديو للصلوات",
+  "prayerVideoDurationsDesc": "حدد المدة (بالدقائق) لعرض بث الفيديو عند وقت الإقامة لكل صلاة. اضبط على 0 للتعطيل.",
+  "specialPrayers": "الصلوات الخاصة",
+  "aid": "العيد",
+  "minutes": "دقيقة"
 }

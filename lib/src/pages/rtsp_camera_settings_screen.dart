@@ -29,6 +29,20 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
   Timer? _saveUrlTimer;
 
+  // Live broadcast duration controllers (in minutes)
+  final TextEditingController _durationFajrController = TextEditingController();
+  final TextEditingController _durationDhuhrController = TextEditingController();
+  final TextEditingController _durationAsrController = TextEditingController();
+  final TextEditingController _durationMaghribController = TextEditingController();
+  final TextEditingController _durationIshaController = TextEditingController();
+  final TextEditingController _durationJumuaController = TextEditingController();
+  final TextEditingController _durationAidController = TextEditingController();
+
+  // Live broadcast enable switches
+  bool _enableDaily = false;
+  bool _enableJumua = false;
+  bool _enableAid = false;
+
   @override
   void initState() {
     super.initState();
@@ -41,8 +55,9 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
       }
     });
 
-    // Load the saved URL immediately when screen opens
+    // Load the saved URL and live broadcast settings immediately when screen opens
     _loadSavedUrl();
+    _loadLiveBroadcastSettings();
   }
 
   Future<void> _loadSavedUrl() async {
@@ -55,6 +70,70 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
       }
     } catch (e) {
       dev.log('⚠️ [RTSP_SCREEN] Error loading saved URL: $e');
+    }
+  }
+
+  Future<void> _loadLiveBroadcastSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Load durations with defaults
+      _durationFajrController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationFajr) ?? 
+          LiveStreamConstants.defaultDurationFajr).toString();
+      _durationDhuhrController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationDhuhr) ?? 
+          LiveStreamConstants.defaultDurationDhuhr).toString();
+      _durationAsrController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationAsr) ?? 
+          LiveStreamConstants.defaultDurationAsr).toString();
+      _durationMaghribController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationMaghrib) ?? 
+          LiveStreamConstants.defaultDurationMaghrib).toString();
+      _durationIshaController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationIsha) ?? 
+          LiveStreamConstants.defaultDurationIsha).toString();
+      _durationJumuaController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationJumua) ?? 
+          LiveStreamConstants.defaultDurationJumua).toString();
+      _durationAidController.text = (prefs.getInt(LiveStreamConstants.prefKeyDurationAid) ?? 
+          LiveStreamConstants.defaultDurationAid).toString();
+      
+      // Load enable switches
+      setState(() {
+        _enableDaily = prefs.getBool(LiveStreamConstants.prefKeyEnableDaily) ?? false;
+        _enableJumua = prefs.getBool(LiveStreamConstants.prefKeyEnableJumua) ?? false;
+        _enableAid = prefs.getBool(LiveStreamConstants.prefKeyEnableAid) ?? false;
+      });
+      
+      dev.log('📝 [RTSP_SCREEN] Loaded live broadcast settings');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error loading live broadcast settings: $e');
+    }
+  }
+
+  Future<void> _saveLiveBroadcastSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Save durations
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationFajr, 
+          int.tryParse(_durationFajrController.text) ?? LiveStreamConstants.defaultDurationFajr);
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationDhuhr, 
+          int.tryParse(_durationDhuhrController.text) ?? LiveStreamConstants.defaultDurationDhuhr);
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationAsr, 
+          int.tryParse(_durationAsrController.text) ?? LiveStreamConstants.defaultDurationAsr);
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationMaghrib, 
+          int.tryParse(_durationMaghribController.text) ?? LiveStreamConstants.defaultDurationMaghrib);
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationIsha, 
+          int.tryParse(_durationIshaController.text) ?? LiveStreamConstants.defaultDurationIsha);
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationJumua, 
+          int.tryParse(_durationJumuaController.text) ?? LiveStreamConstants.defaultDurationJumua);
+      await prefs.setInt(LiveStreamConstants.prefKeyDurationAid, 
+          int.tryParse(_durationAidController.text) ?? LiveStreamConstants.defaultDurationAid);
+      
+      // Save enable switches
+      await prefs.setBool(LiveStreamConstants.prefKeyEnableDaily, _enableDaily);
+      await prefs.setBool(LiveStreamConstants.prefKeyEnableJumua, _enableJumua);
+      await prefs.setBool(LiveStreamConstants.prefKeyEnableAid, _enableAid);
+      
+      dev.log('💾 [RTSP_SCREEN] Saved live broadcast settings');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error saving live broadcast settings: $e');
     }
   }
 
@@ -79,6 +158,14 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
     keyboardSubscription.cancel();
+    // Dispose duration controllers
+    _durationFajrController.dispose();
+    _durationDhuhrController.dispose();
+    _durationAsrController.dispose();
+    _durationMaghribController.dispose();
+    _durationIshaController.dispose();
+    _durationJumuaController.dispose();
+    _durationAidController.dispose();
     super.dispose();
   }
 
@@ -485,6 +572,9 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
                   ),
                 );
               }
+              
+              // Save live broadcast settings
+              await _saveLiveBroadcastSettings();
             },
             icon: const Icon(Icons.save),
             label: Text(S.of(context).save),
@@ -517,8 +607,146 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
               }),
             ),
           ),
+          const SizedBox(height: 30),
+          // Live broadcast settings section
+          _buildLiveBroadcastSection(state),
         ],
       ],
+    );
+  }
+
+  /// Build the live broadcast settings section
+  Widget _buildLiveBroadcastSection(LiveStreamViewerState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Live Broadcast Settings',
+          style: Theme.of(context).textTheme.titleMedium?.apply(fontSizeFactor: 1.5),
+          textAlign: TextAlign.center,
+        ),
+        const Divider(indent: 50, endIndent: 50),
+        const SizedBox(height: 10),
+        Text(
+          'Configure live broadcast durations for each prayer. Set to 0 to trigger at Adhan time instead of Iqama.',
+          style: Theme.of(context).textTheme.bodySmall?.apply(fontSizeFactor: 1.2),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        
+        // Enable switches section
+        Text(
+          'Enable Live Broadcast',
+          style: Theme.of(context).textTheme.titleSmall?.apply(fontSizeFactor: 1.2),
+        ),
+        const SizedBox(height: 10),
+        _buildEnableSwitch(
+          title: 'Daily Prayers (5 prayers)',
+          subtitle: 'Enable live broadcast for Fajr, Dhuhr, Asr, Maghrib, Isha',
+          value: _enableDaily,
+          onChanged: (value) {
+            setState(() => _enableDaily = value);
+          },
+        ),
+        const SizedBox(height: 8),
+        _buildEnableSwitch(
+          title: 'Jumua (Friday Prayer)',
+          subtitle: 'Enable live broadcast for Friday prayer',
+          value: _enableJumua,
+          onChanged: (value) {
+            setState(() => _enableJumua = value);
+          },
+        ),
+        const SizedBox(height: 8),
+        _buildEnableSwitch(
+          title: 'Aïd Prayers',
+          subtitle: 'Enable live broadcast for Eid prayers',
+          value: _enableAid,
+          onChanged: (value) {
+            setState(() => _enableAid = value);
+          },
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Duration settings section
+        Text(
+          'Broadcast Durations (minutes)',
+          style: Theme.of(context).textTheme.titleSmall?.apply(fontSizeFactor: 1.2),
+        ),
+        const SizedBox(height: 10),
+        
+        // Daily prayers durations
+        if (_enableDaily) ...[
+          _buildDurationRow('Fajr', _durationFajrController),
+          _buildDurationRow('Dhuhr', _durationDhuhrController),
+          _buildDurationRow('Asr', _durationAsrController),
+          _buildDurationRow('Maghrib', _durationMaghribController),
+          _buildDurationRow('Isha', _durationIshaController),
+        ],
+        
+        // Jumua duration
+        if (_enableJumua) ...[
+          _buildDurationRow('Jumua', _durationJumuaController),
+        ],
+        
+        // Aid duration
+        if (_enableAid) ...[
+          _buildDurationRow('Aïd', _durationAidController),
+        ],
+      ],
+    );
+  }
+
+  /// Build a switch tile for enabling/disabling live broadcast
+  Widget _buildEnableSwitch({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      onChanged: onChanged,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+    );
+  }
+
+  /// Build a row with a label and a duration input field
+  Widget _buildDurationRow(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                suffixText: 'min',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

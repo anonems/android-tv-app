@@ -460,5 +460,10 @@
   "prayerTimeNotificationTitle":"Prayer Time Notifications",
   "prayerTimeNotificationDesc":"Get the adhan at prayer times, even when the app is closed",
   "enablePrayerReminders":"Enable Prayer Reminders",
-  "enablePrayerRemindersDesc":"Works automatically in the background"
+  "enablePrayerRemindersDesc":"Works automatically in the background",
+  "prayerVideoDurations": "Prayer Video Durations",
+  "prayerVideoDurationsDesc": "Set the duration (in minutes) to display the video stream at iqama time for each prayer. Set to 0 to disable.",
+  "specialPrayers": "Special Prayers",
+  "aid": "Eid",
+  "minutes": "min"
 }

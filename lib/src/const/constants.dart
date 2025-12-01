@@ -194,4 +194,32 @@ abstract class LiveStreamConstants {
 
   /// Timeout for auto-detection of live camera in minutes
   static const int autoDetectionTimeoutMinutes = 3;
+
+  // ===== Live broadcast duration settings (in minutes) =====
+
+  /// Keys for live broadcast durations per prayer
+  static const String prefKeyDurationFajr = 'live_duration_fajr';
+  static const String prefKeyDurationDhuhr = 'live_duration_dhuhr';
+  static const String prefKeyDurationAsr = 'live_duration_asr';
+  static const String prefKeyDurationMaghrib = 'live_duration_maghrib';
+  static const String prefKeyDurationIsha = 'live_duration_isha';
+  static const String prefKeyDurationJumua = 'live_duration_jumua';
+  static const String prefKeyDurationAid = 'live_duration_aid';
+
+  /// Keys for enabling live broadcast per category
+  static const String prefKeyEnableDaily = 'live_enable_daily';
+  static const String prefKeyEnableJumua = 'live_enable_jumua';
+  static const String prefKeyEnableAid = 'live_enable_aid';
+
+  /// Default duration values in minutes
+  static const int defaultDurationFajr = 30;
+  static const int defaultDurationDhuhr = 20;
+  static const int defaultDurationAsr = 20;
+  static const int defaultDurationMaghrib = 15;
+  static const int defaultDurationIsha = 25;
+  static const int defaultDurationJumua = 45;
+  static const int defaultDurationAid = 60;
+
+  /// Fallback duration when duration is set to 0 (trigger at Adhan)
+  static const int fallbackDurationForAdhanTrigger = 15;
 }

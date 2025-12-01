@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mawaqit/src/const/constants.dart';
 import 'package:mawaqit/src/pages/home/sub_screens/StreamReplacementScreen.dart';
@@ -184,7 +183,7 @@ class PrayerWorkflowUtils {
 }
 
 /// Widget that displays the video stream during a prayer
-class _PrayerVideoScreen extends ConsumerWidget {
+class _PrayerVideoScreen extends ConsumerStatefulWidget {
   final VoidCallback onDone;
   final PrayerType prayerType;
 
@@ -194,7 +193,12 @@ class _PrayerVideoScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PrayerVideoScreen> createState() => _PrayerVideoScreenState();
+}
+
+class _PrayerVideoScreenState extends ConsumerState<_PrayerVideoScreen> {
+  @override
+  Widget build(BuildContext context) {
     final streamState = ref.watch(liveStreamProvider);
 
     return streamState.when(
@@ -202,7 +206,9 @@ class _PrayerVideoScreen extends ConsumerWidget {
         // Check if stream is enabled and active
         if (!state.isEnabled || state.streamStatus != LiveStreamStatus.active) {
           // If stream is not available, call onDone to skip to next workflow item
-          WidgetsBinding.instance.addPostFrameCallback((_) => onDone());
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) widget.onDone();
+          });
           return Container(color: Colors.black);
         }
 
@@ -217,7 +223,9 @@ class _PrayerVideoScreen extends ConsumerWidget {
       ),
       error: (error, stack) {
         // On error, skip to next workflow item
-        WidgetsBinding.instance.addPostFrameCallback((_) => onDone());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onDone();
+        });
         return Container(color: Colors.black);
       },
     );

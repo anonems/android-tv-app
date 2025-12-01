@@ -28,6 +28,21 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
   late StreamSubscription<bool> keyboardSubscription;
 
   Timer? _saveUrlTimer;
+  Timer? _saveDurationTimer;
+
+  // Controllers for live video duration fields
+  final TextEditingController _fajrDurationController = TextEditingController();
+  final TextEditingController _dhuhrDurationController = TextEditingController();
+  final TextEditingController _asrDurationController = TextEditingController();
+  final TextEditingController _maghribDurationController = TextEditingController();
+  final TextEditingController _ishaDurationController = TextEditingController();
+  final TextEditingController _jumuaDurationController = TextEditingController();
+  final TextEditingController _aidDurationController = TextEditingController();
+
+  // Switch states for live enable
+  bool _liveEnableDaily = false;
+  bool _liveEnableJumua = false;
+  bool _liveEnableAid = false;
 
   @override
   void initState() {
@@ -43,6 +58,8 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
 
     // Load the saved URL immediately when screen opens
     _loadSavedUrl();
+    // Load the live video settings
+    _loadLiveVideoSettings();
   }
 
   Future<void> _loadSavedUrl() async {
@@ -56,6 +73,68 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     } catch (e) {
       dev.log('⚠️ [RTSP_SCREEN] Error loading saved URL: $e');
     }
+  }
+
+  Future<void> _loadLiveVideoSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        // Load durations with defaults
+        _fajrDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationFajr) ?? LiveStreamConstants.defaultDurationFajr).toString();
+        _dhuhrDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationDhuhr) ?? LiveStreamConstants.defaultDurationDhuhr).toString();
+        _asrDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationAsr) ?? LiveStreamConstants.defaultDurationAsr).toString();
+        _maghribDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationMaghrib) ?? LiveStreamConstants.defaultDurationMaghrib).toString();
+        _ishaDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationIsha) ?? LiveStreamConstants.defaultDurationIsha).toString();
+        _jumuaDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationJumua) ?? LiveStreamConstants.defaultDurationJumua).toString();
+        _aidDurationController.text =
+            (prefs.getInt(LiveStreamConstants.prefKeyLiveDurationAid) ?? LiveStreamConstants.defaultDurationAid).toString();
+
+        // Load enable switches
+        _liveEnableDaily = prefs.getBool(LiveStreamConstants.prefKeyLiveEnableDaily) ?? false;
+        _liveEnableJumua = prefs.getBool(LiveStreamConstants.prefKeyLiveEnableJumua) ?? false;
+        _liveEnableAid = prefs.getBool(LiveStreamConstants.prefKeyLiveEnableAid) ?? false;
+      });
+      dev.log('📝 [RTSP_SCREEN] Loaded live video settings');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error loading live video settings: $e');
+    }
+  }
+
+  Future<void> _saveLiveVideoSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Save durations
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationFajr, int.tryParse(_fajrDurationController.text) ?? LiveStreamConstants.defaultDurationFajr);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationDhuhr, int.tryParse(_dhuhrDurationController.text) ?? LiveStreamConstants.defaultDurationDhuhr);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationAsr, int.tryParse(_asrDurationController.text) ?? LiveStreamConstants.defaultDurationAsr);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationMaghrib, int.tryParse(_maghribDurationController.text) ?? LiveStreamConstants.defaultDurationMaghrib);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationIsha, int.tryParse(_ishaDurationController.text) ?? LiveStreamConstants.defaultDurationIsha);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationJumua, int.tryParse(_jumuaDurationController.text) ?? LiveStreamConstants.defaultDurationJumua);
+      await prefs.setInt(LiveStreamConstants.prefKeyLiveDurationAid, int.tryParse(_aidDurationController.text) ?? LiveStreamConstants.defaultDurationAid);
+
+      // Save enable switches
+      await prefs.setBool(LiveStreamConstants.prefKeyLiveEnableDaily, _liveEnableDaily);
+      await prefs.setBool(LiveStreamConstants.prefKeyLiveEnableJumua, _liveEnableJumua);
+      await prefs.setBool(LiveStreamConstants.prefKeyLiveEnableAid, _liveEnableAid);
+
+      dev.log('💾 [RTSP_SCREEN] Saved live video settings');
+    } catch (e) {
+      dev.log('⚠️ [RTSP_SCREEN] Error saving live video settings: $e');
+    }
+  }
+
+  void _saveDebouncedLiveVideoSettings() {
+    _saveDurationTimer?.cancel();
+    _saveDurationTimer = Timer(const Duration(milliseconds: 500), () {
+      _saveLiveVideoSettings();
+    });
   }
 
   void _saveDebouncedUrl(String url) {
@@ -78,7 +157,16 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
     _saveButtonFocusNode.dispose();
     _replaceWorkflowWithStreamButtonFocusNode.dispose();
     _saveUrlTimer?.cancel();
+    _saveDurationTimer?.cancel();
     keyboardSubscription.cancel();
+    // Dispose live video duration controllers
+    _fajrDurationController.dispose();
+    _dhuhrDurationController.dispose();
+    _asrDurationController.dispose();
+    _maghribDurationController.dispose();
+    _ishaDurationController.dispose();
+    _jumuaDurationController.dispose();
+    _aidDurationController.dispose();
     super.dispose();
   }
 
@@ -394,6 +482,72 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
               ),
             ),
           ),
+          const SizedBox(height: 30),
+          // Live Video Settings Section
+          Text(
+            S.of(context).liveVideoSettings,
+            style: Theme.of(context).textTheme.bodyLarge?.apply(fontSizeFactor: 1.2),
+            textAlign: TextAlign.center,
+          ),
+          const Divider(indent: 50, endIndent: 50),
+          const SizedBox(height: 10),
+          // Enable switches
+          SwitchListTile(
+            title: Text(S.of(context).enableDailyLive),
+            value: _liveEnableDaily,
+            onChanged: (value) {
+              setState(() => _liveEnableDaily = value);
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: Text(S.of(context).enableJumuaLive),
+            value: _liveEnableJumua,
+            onChanged: (value) {
+              setState(() => _liveEnableJumua = value);
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: Text(S.of(context).enableAidLive),
+            value: _liveEnableAid,
+            onChanged: (value) {
+              setState(() => _liveEnableAid = value);
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Duration fields
+          Text(
+            S.of(context).liveDurationSettings,
+            style: Theme.of(context).textTheme.bodyMedium?.apply(fontSizeFactor: 1.1),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          _buildDurationField(S.of(context).fajrDuration, _fajrDurationController),
+          const SizedBox(height: 8),
+          _buildDurationField(S.of(context).dhuhrDuration, _dhuhrDurationController),
+          const SizedBox(height: 8),
+          _buildDurationField(S.of(context).asrDuration, _asrDurationController),
+          const SizedBox(height: 8),
+          _buildDurationField(S.of(context).maghribDuration, _maghribDurationController),
+          const SizedBox(height: 8),
+          _buildDurationField(S.of(context).ishaDuration, _ishaDurationController),
+          const SizedBox(height: 8),
+          _buildDurationField(S.of(context).jumuaDuration, _jumuaDurationController),
+          const SizedBox(height: 8),
+          _buildDurationField(S.of(context).aidDuration, _aidDurationController),
           const SizedBox(height: 20),
           ElevatedButton.icon(
             focusNode: _saveButtonFocusNode,
@@ -467,24 +621,27 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
                 dev.log('📝 [RTSP_SCREEN] URL unchanged and stream active, only updating workflow flag');
                 // URL hasn't changed and stream is active, just update the workflow flag if needed
                 ref.read(liveStreamProvider.notifier).toggleReplaceWorkflow(state.replaceWorkflow);
-
-                // Show success message
-                scaffoldMessenger.clearSnackBars();
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        const Icon(Icons.check_circle, color: Colors.white),
-                        const SizedBox(width: 12),
-                        Text('Settings saved successfully'),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
               }
+
+              // Save live video settings
+              await _saveLiveVideoSettings();
+
+              // Show success message
+              scaffoldMessenger.clearSnackBars();
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 12),
+                      Text('Settings saved successfully'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
             icon: const Icon(Icons.save),
             label: Text(S.of(context).save),
@@ -519,6 +676,24 @@ class _RTSPCameraSettingsScreenState extends ConsumerState<RTSPCameraSettingsScr
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildDurationField(String label, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      onEditingComplete: () {
+        _saveDebouncedLiveVideoSettings();
+      },
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: S.of(context).minutes,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
     );
   }
 }

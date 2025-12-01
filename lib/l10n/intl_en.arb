@@ -460,5 +460,18 @@
   "prayerTimeNotificationTitle":"Prayer Time Notifications",
   "prayerTimeNotificationDesc":"Get the adhan at prayer times, even when the app is closed",
   "enablePrayerReminders":"Enable Prayer Reminders",
-  "enablePrayerRemindersDesc":"Works automatically in the background"
+  "enablePrayerRemindersDesc":"Works automatically in the background",
+  "liveVideoSettings": "Live Video Settings",
+  "enableDailyLive": "Enable Live for Daily Prayers",
+  "enableJumuaLive": "Enable Live for Jumua",
+  "enableAidLive": "Enable Live for Aïd",
+  "liveDurationSettings": "Live Duration (minutes)",
+  "fajrDuration": "Fajr Duration",
+  "dhuhrDuration": "Dhuhr Duration",
+  "asrDuration": "Asr Duration",
+  "maghribDuration": "Maghrib Duration",
+  "ishaDuration": "Isha Duration",
+  "jumuaDuration": "Jumua Duration",
+  "aidDuration": "Aïd Duration",
+  "minutes": "min"
 }

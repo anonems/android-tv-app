@@ -174,6 +174,29 @@ abstract class LiveStreamConstants {
   /// Key for the auto replace workflow preference in SharedPreferences
   static const String prefKeyAutoReplaceWorkflow = 'livestream_auto_replace_workflow';
 
+  /// Keys for live video durations (in minutes) for each prayer
+  static const String prefKeyLiveDurationFajr = 'live_duration_fajr';
+  static const String prefKeyLiveDurationDhuhr = 'live_duration_dhuhr';
+  static const String prefKeyLiveDurationAsr = 'live_duration_asr';
+  static const String prefKeyLiveDurationMaghrib = 'live_duration_maghrib';
+  static const String prefKeyLiveDurationIsha = 'live_duration_isha';
+  static const String prefKeyLiveDurationJumua = 'live_duration_jumua';
+  static const String prefKeyLiveDurationAid = 'live_duration_aid';
+
+  /// Keys for enabling/disabling live mode
+  static const String prefKeyLiveEnableDaily = 'live_enable_daily';
+  static const String prefKeyLiveEnableJumua = 'live_enable_jumua';
+  static const String prefKeyLiveEnableAid = 'live_enable_aid';
+
+  /// Default durations for each prayer (in minutes)
+  static const int defaultDurationFajr = 10;
+  static const int defaultDurationDhuhr = 15;
+  static const int defaultDurationAsr = 10;
+  static const int defaultDurationMaghrib = 8;
+  static const int defaultDurationIsha = 12;
+  static const int defaultDurationJumua = 30;
+  static const int defaultDurationAid = 30;
+
   /// Default buffer timeout in milliseconds
   static const int bufferTimeoutMs = 10000;
 
